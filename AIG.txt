@@ -1,0 +1,170 @@
+////////////////////////////////////////////////////////////// Elastic Scripts
+
+ curl -XDELETE "sandbox.hortonworks.com:9201/.kibana/index-pattern/dbstest7"
+ curl -XDELETE 'sandbox.hortonworks.com:9201/dbstest7?pretty'
+
+
+curl -XPOST sandbox.hortonworks.com:9201/dbstest7 -d '{
+    "settings" : {
+        "number_of_shards" : 1
+    },
+    "mappings" : {
+        "type1" : {
+            "properties" : {
+                "rowid" : { "type" : "string", "index" : "not_analyzed"}
+            }
+        },
+        "type2" : {
+            "properties" : {
+                "medallion" : { "type" : "string", "index" : "not_analyzed"}
+            }
+        },
+        "type3" : {
+            "properties" : {
+                "hack_license" : { "type" : "string", "index" : "not_analyzed" }
+            }
+        },
+        "type4" : {
+            "properties" : {
+                "pickup_datetime" : { "type" : "date", "index" : "not_analyzed", "format": "yyyy-MM-dd HH:mm:ss" }
+            }
+        },
+        "type5" : {
+            "properties" : {
+                "dropoff_datetime" : { "type" : "date", "index" : "not_analyzed", "format": "yyyy-MM-dd HH:mm:ss" }
+            }
+        },
+        "type6" : {
+            "properties" : {
+                "trip_time_in_secs" : { "type" : "short", "index" : "not_analyzed" }
+            }
+        },
+        "type7" : {
+            "properties" : {
+                "trip_distance" : { "type" : "double", "index" : "not_analyzed" }
+            }
+        },
+        "type8" : {
+            "properties" : {
+                "pickup_longitude" : { "type" : "string", "index" : "not_analyzed" }
+            }
+        },
+        "type9" : {
+            "properties" : {
+                "pickup_lattitude" : { "type" : "string", "index" : "not_analyzed" }
+            }
+        },
+        "type10" : {
+            "properties" : {
+                "dropoff_longitude" : { "type" : "string", "index" : "not_analyzed" }
+            }
+        },
+        "type11" : {
+            "properties" : {
+                "dropoff_lattitude" : { "type" : "string", "index" : "not_analyzed" }
+            }
+        },
+        "type12" : {
+            "properties" : {
+                "payment_type" : { "type" : "string", "index" : "not_analyzed" }
+            }
+        },
+        "type13" : {
+            "properties" : {
+                "fare_amount" : { "type" : "double", "index" : "not_analyzed" }
+            }
+        },
+        "type14" : {
+            "properties" : {
+                "surcharge" : { "type" : "double", "index" : "not_analyzed" }
+            }
+        },
+        "type15" : {
+            "properties" : {
+                "mta_tax" : { "type" : "double", "index" : "not_analyzed" }
+            }
+        },		
+        "type16" : {
+            "properties" : {
+                "tip_amount" : { "type" : "double", "index" : "not_analyzed" }
+            }
+        },		
+        "type17" : {
+            "properties" : {
+                "tolls_amount" : { "type" : "double", "index" : "not_analyzed" }
+            }
+        },		
+        "type18" : {
+            "properties" : {
+                "total_amount" : { "type" : "double", "index" : "not_analyzed" }
+            }
+        },		
+        "type19" : {
+            "properties" : {
+                "TouchTS" : { "type" : "date", "index" : "not_analyzed", "format": "yyyy-MM-dd HH:mm:ss.SSSSSS" }
+            }
+        },		
+        "type20" : {
+            "properties" : {
+                "ProcessedTS" : { "type" : "date", "index" : "not_analyzed", "format": "yyyy-MM-dd HH:mm:ss.SSSSSS" }
+            }
+        },		
+        "type21" : {
+            "properties" : {
+                "fromcellid" : { "type" : "string", "index" : "not_analyzed" }
+            }
+        },		
+        "type22" : {
+            "properties" : {
+                "tocellid" : { "type" : "string", "index" : "not_analyzed" }
+            }}}}'
+
+curl -XGET 'sandbox.hortonworks.com:9201/dbstest7?pretty'
+
+
+//////////////////////////////////////////////////////////////// Hbase Scripts
+hbase shell
+
+disable 'DBSTest7'
+drop 'DBSTest7'
+create 'DBSTest7','CF1'
+scan 'DBSTest7'
+
+////////////////////////////////////////////////////////////// Phoenix Scripts
+./sqlline.py localhost:2181:/hbase-unsecure
+
+drop view "DBSTest7";
+
+CREATE view  "DBSTest7" 
+( "rowID" VARCHAR not null primary key, 
+"CF1"."tocellid" VARCHAR,
+"CF1"."fromcellid" VARCHAR, 
+"CF1"."TouchTS" varchar,
+"CF1"."ProcessedTS" varchar,
+"CF1"."pickup_datetime" DATE,
+"CF1"."dropoff_datetime" DATE
+);
+
+%phoenix -- to be used for Zeppelin
+select 
+"tocellid" ToCellID,
+"fromcellid" FromCellID,
+    max(to_date("ProcessedTS",'yyyy-MM-dd hh:mm:ss.SSSSSS') - to_date("TouchTS",'yyyy-MM-dd hh:mm:ss.SSSSSS') )*24*60 Delay,
+count(*) Trips
+from "DBSTest7" 
+where "tocellid" <> 'OutLiner'
+and  "fromcellid" <> 'OutLiner'
+and (CURRENT_TIME() - to_date("ProcessedTS",'yyyy-MM-dd hh:mm:ss.SSSSSS'))*24*60 > 30
+group by "tocellid","fromcellid"
+order by Trips desc
+
+
+////////////////////////////////////////////////////////////// Kafka
+./kafka-console-consumer.sh --zookeeper localhost:2181 --topic DBSTest7
+
+
+
+
+
+
+	
